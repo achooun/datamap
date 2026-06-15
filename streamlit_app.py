@@ -319,6 +319,50 @@ try:
     st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True)
 
     # ─────────────────────────────────────────────────────────
+    # 8-2. [신규 추가] 소득분위 기준 및 사각지대 모순 원인 분석
+    # ─────────────────────────────────────────────────────────
+    section_label("소득분위 구조 및 모순 진단")
+    
+    st.markdown("""
+<div style="background:#FFFFFF; border: 1px solid #DDDDDD; padding: 28px 24px; font-family:'Noto Sans KR',sans-serif; margin-bottom: 40px;">
+    <h3 style="font-family:'Noto Serif KR',Georgia,serif; font-size:20px; font-weight:700; color:#111111; margin-top:0; margin-bottom:12px;">
+        기계적 소득구간 산정이 만들어낸 중산층 사각지대의 실체
+    </h3>
+    <p style="font-size:13px; color:#444444; line-height:1.75; margin-bottom:24px;">
+        정부 고등교육 재정 지원의 척도인 <b>학자금 지원구간(소득분위)</b>은 가구의 월급뿐 아니라 부동산, 자동차 등 '재산의 소득환산액'을 더해 산정됩니다. 
+        이 기계적 차단선은 통계 수치와 대학생들이 체감하는 실질 가계 경기 간의 극심한 모순을 유발합니다.
+    </p>
+    
+    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #1A3A6C;">
+            <p style="font-size:11px; font-weight:700; color:#1A3A6C; text-transform:uppercase; margin-top:0; margin-bottom:12px; letter-spacing:0.05em;">
+                ■ 학자금 지원 소득분위 경계 구조
+            </p>
+            <table style="width:100%; border-collapse:collapse; font-size:12px; color:#333333; margin-bottom:12px;">
+                <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:7px 0; color:#555555;">기초생활수급자 ~ 8구간</td><td style="text-align:right; font-weight:600; color:#1A3A6C;">기준 중위소득 200% 이하</td></tr>
+                <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:7px 0; font-weight:600; color:#C41E3A;">9 ~ 10구간 (제도적 사각지대)</td><td style="text-align:right; font-weight:700; color:#C41E3A;">기준 중위소득 200% 초과</td></tr>
+            </table>
+            <p style="font-size:12px; color:#555555; line-height:1.65; margin:0;">
+                <b>경계선의 함정:</b> 4인 가구 기준 월 소득인정액이 약 1,100만~1,200만 원(중위소득 200%)을 넘는 순간 9구간으로 분류됩니다. 
+                이 선을 넘어가는 즉시 모든 <b>국가장학금 무상 지원 대상에서 원천 배제</b>되며, 무이자·거치식 대출(ICL) 자격마저 상실됩니다.
+            </p>
+        </div>
+        
+        <div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #C41E3A;">
+            <p style="font-size:11px; font-weight:700; color:#C41E3A; text-transform:uppercase; margin-top:0; margin-bottom:12px; letter-spacing:0.05em;">
+                ■ 실질 경제력과 서류상 자산의 3대 모순 원인
+            </p>
+            <ul style="margin:0; padding-left:16px; font-size:12px; color:#333333; line-height:1.75;">
+                <li style="margin-bottom:6px;"><b>부동산 자산 착시:</b> 부모의 실제 월 급여 소득이 평범하더라도 장기 보유한 주택 한 채의 공시지가가 급등하면 자산 환산액이 누적되어 기계적으로 9·10구간에 진입합니다.</li>
+                <li style="margin-bottom:6px;"><b>가계 부채 차감의 한계:</b> 제1금융권 외 사금융 부채, 형제자매 다자녀 교육비, 노부모 부양비 등 실질적인 가계 고정 지출 부담이 산정 방식에서 배제됩니다.</li>
+                <li><b>해체 가구 및 명의 모순:</b> 부모의 이혼, 사업 실패, 관계 단절 등으로 실질적인 재정 지원을 전혀 받지 못하는 독자 생계 학생임에도 서류상 부모 자산 때문에 지원 대상에서 탈락합니다.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ─────────────────────────────────────────────────────────
     # 9. 메인 레이아웃 — 차트 탭 (좌) + 지도 (우)
     # ─────────────────────────────────────────────────────────
     section_label("인터랙티브 분석")
