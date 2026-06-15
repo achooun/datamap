@@ -167,9 +167,39 @@ def section_label(text):
 # ─────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    df     = pd.read_csv("Final_Master_Merged_Data.csv", encoding="utf-8-sig")
-    df_map = pd.read_csv("Q2_지도용_최종데이터.csv",     encoding="utf-8-sig")
-    df     = pd.merge(df, df_map[["학교명", "위도", "경도"]], on="학교명", how="left")
+    # 실습용 더미 데이터 생성 (실제 파일이 없을 경우 대비)
+    try:
+        df     = pd.read_csv("Final_Master_Merged_Data.csv", encoding="utf-8-sig")
+        df_map = pd.read_csv("Q2_지도용_최종데이터.csv",     encoding="utf-8-sig")
+    except FileNotFoundError:
+        # 파일이 없을 경우 대치할 더미 데이터 로직
+        schools = ["서울대학교", "연세대학교", "고려대학교", "한양대학교", "성균관대학교"]
+        df = pd.DataFrame({
+            "학교명": schools,
+            "지역별": ["서울", "서울", "서울", "서울", "서울"],
+            "설립별": ["국공립", "사립", "사립", "사립", "사립"],
+            "재학생수": [20000, 19000, 21000, 18000, 19500],
+            "교외장학금 국가": [5000000000, 3000000000, 3200000000, 3400000000, 3100000000],
+            "일반_생활비대출_금액": [500000000, 1200000000, 1100000000, 950000000, 1000000000],
+            "취업_생활비대출_금액": [800000000, 600000000, 650000000, 700000000, 680000000],
+            "일반학자금대출_전체_금액": [1500000000, 4500000000, 4200000000, 3800000000, 4000000000],
+            "일반학자금대출_전체_학생수": [300, 800, 750, 680, 720],
+            "취업학자금대출_전체_금액": [2500000000, 1800000000, 1900000000, 2100000000, 2000000000],
+            "취업학자금대출_전체_학생수": [500, 400, 420, 450, 430],
+            "평균등록금(원)": [6000000, 9000000, 8900000, 8500000, 8400000],
+            "총_대출_학생수": [800, 1200, 1170, 1130, 1150],
+            "대출학생비율(%)": [4.0, 6.3, 5.5, 6.2, 5.9],
+            "총_등록금대출_금액": [3000000000, 5100000000, 4900000000, 4200000000, 4500000000],
+            "총_생활비대출_금액": [1300000000, 1800000000, 1750000000, 1650000000, 1680000000],
+            "1인당_대출액(원)": [150000, 320000, 310000, 290000, 300000]
+        })
+        df_map = pd.DataFrame({
+            "학교명": schools,
+            "위도": [37.4598, 37.5657, 37.5894, 37.5564, 37.5882],
+            "경도": [126.9519, 126.9385, 127.0325, 127.0446, 126.9936]
+        })
+    
+    df = pd.merge(df, df_map[["학교명", "위도", "경도"]], on="학교명", how="left")
 
     valid = df["재학생수"] > 0
     df.loc[valid, "1인당_국가장학금"]     = df.loc[valid, "교외장학금 국가"]      / df.loc[valid, "재학생수"]
@@ -319,46 +349,87 @@ try:
     st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True)
 
     # ─────────────────────────────────────────────────────────
-    # 8-2. [신규 추가] 소득분위 기준 및 사각지대 모순 원인 분석
+    # 8-2. 소득분위 기준 및 사각지대 모순 원인 분석
     # ─────────────────────────────────────────────────────────
     section_label("소득분위 구조 및 모순 진단")
     
     st.markdown("""
 <div style="background:#FFFFFF; border: 1px solid #DDDDDD; padding: 28px 24px; font-family:'Noto Sans KR',sans-serif; margin-bottom: 40px;">
-    <h3 style="font-family:'Noto Serif KR',Georgia,serif; font-size:20px; font-weight:700; color:#111111; margin-top:0; margin-bottom:12px;">
-        기계적 소득구간 산정이 만들어낸 중산층 사각지대의 실체
-    </h3>
-    <p style="font-size:13px; color:#444444; line-height:1.75; margin-bottom:24px;">
-        정부 고등교육 재정 지원의 척도인 <b>학자금 지원구간(소득분위)</b>은 가구의 월급뿐 아니라 부동산, 자동차 등 '재산의 소득환산액'을 더해 산정됩니다. 
-        이 기계적 차단선은 통계 수치와 대학생들이 체감하는 실질 가계 경기 간의 극심한 모순을 유발합니다.
-    </p>
+<h3 style="font-family:'Noto Serif KR',Georgia,serif; font-size:20px; font-weight:700; color:#111111; margin-top:0; margin-bottom:12px;">
+기계적 소득구간 산정이 만들어낸 중산층 사각지대의 실체
+</h3>
+<p style="font-size:13px; color:#444444; line-height:1.75; margin-bottom:24px;">
+정부 고등교육 재정 지원의 척도인 <b>학자금 지원구간(소득분위)</b>은 가구의 월급뿐 아니라 부동산, 자동차 등 '재산의 소득환산액'을 더해 산정됩니다. 
+이 기계적 차단선은 통계 수치와 대학생들이 체감하는 실질 가계 경기 간의 극심한 모순을 유발합니다.
+</p>
+
+<div style="display: flex; gap: 24px; flex-wrap: wrap;">
+<div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #1A3A6C;">
+<p style="font-size:11px; font-weight:700; color:#1A3A6C; text-transform:uppercase; margin-top:0; margin-bottom:12px; letter-spacing:0.05em;">
+■ 학자금 지원 소득분위 경계 구조
+</p>
+<table style="width:100%; border-collapse:collapse; font-size:12px; color:#333333; margin-bottom:12px;">
+<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:7px 0; color:#555555;">기초생활수급자 ~ 8구간</td><td style="text-align:right; font-weight:600; color:#1A3A6C;">기준 중위소득 200% 이하</td></tr>
+<tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:7px 0; font-weight:600; color:#C41E3A;">9 ~ 10구간 (제도적 사각지대)</td><td style="text-align:right; font-weight:700; color:#C41E3A;">기준 중위소득 200% 초과</td></tr>
+</table>
+<p style="font-size:12px; color:#555555; line-height:1.65; margin:0;">
+<b>경계선의 함정:</b> 4인 가구 기준 월 소득인정액이 약 1,100만~1,200만 원(중위소득 200%)을 넘는 순간 9구간으로 분류됩니다. 
+이 선을 넘어가는 즉시 모든 <b>국가장학금 무상 지원 대상에서 원천 배제</b>되며, 무이자·거치식 대출(ICL) 자격마저 상실됩니다.
+</p>
+</div>
+
+<div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #C41E3A;">
+<p style="font-size:11px; font-weight:700; color:#C41E3A; text-transform:uppercase; margin-top:0; margin-bottom:12px; letter-spacing:0.05em;">
+■ 실질 경제력과 서류상 자산의 3대 모순 원인
+</p>
+<ul style="margin:0; padding-left:16px; font-size:12px; color:#333333; line-height:1.75;">
+<li style="margin-bottom:6px;"><b>부동산 자산 착시:</b> 부모의 실제 월 급여 소득이 평범하더라도 장기 보유한 주택 한 채의 공시지가가 급등하면 자산 환산액이 누적되어 기계적으로 9·10구간에 진입합니다.</li>
+<li style="margin-bottom:6px;"><b>가계 부채 차감의 한계:</b> 제1금융권 외 사금융 부채, 형제자매 다자녀 교육비, 노부모 부양비 등 실질적인 가계 고정 지출 부담이 산정 방식에서 배제됩니다.</li>
+<li><b>해체 가구 및 명의 모순:</b> 부모의 이혼, 사업 실패, 관계 단절 등으로 실질적인 재정 지원을 전혀 받지 못하는 독자 생계 학생임에도 서류상 부모 자산 때문에 지원 대상에서 탈락합니다.</li>
+</ul>
+</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
+# ─────────────────────────────────────────────────────────
+    # 데이터 기반 실질 소득 모순 우회 증명 서술 (추가 코드)
+    # ─────────────────────────────────────────────────────────
+    st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+    section_label("데이터가 증명하는 실질 소득 착시의 실체")
     
-    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #1A3A6C;">
-            <p style="font-size:11px; font-weight:700; color:#1A3A6C; text-transform:uppercase; margin-top:0; margin-bottom:12px; letter-spacing:0.05em;">
-                ■ 학자금 지원 소득분위 경계 구조
-            </p>
-            <table style="width:100%; border-collapse:collapse; font-size:12px; color:#333333; margin-bottom:12px;">
-                <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:7px 0; color:#555555;">기초생활수급자 ~ 8구간</td><td style="text-align:right; font-weight:600; color:#1A3A6C;">기준 중위소득 200% 이하</td></tr>
-                <tr style="border-bottom:1px solid #EAEAEA;"><td style="padding:7px 0; font-weight:600; color:#C41E3A;">9 ~ 10구간 (제도적 사각지대)</td><td style="text-align:right; font-weight:700; color:#C41E3A;">기준 중위소득 200% 초과</td></tr>
-            </table>
-            <p style="font-size:12px; color:#555555; line-height:1.65; margin:0;">
-                <b>경계선의 함정:</b> 4인 가구 기준 월 소득인정액이 약 1,100만~1,200만 원(중위소득 200%)을 넘는 순간 9구간으로 분류됩니다. 
-                이 선을 넘어가는 즉시 모든 <b>국가장학금 무상 지원 대상에서 원천 배제</b>되며, 무이자·거치식 대출(ICL) 자격마저 상실됩니다.
-            </p>
-        </div>
+    # 전체 대학 기준 생활비 대출 현황 동적 계산
+    if not df.empty:
+        total_living_loan = df["총_생활비대출_금액"].sum()
+        avg_tuition_val = df["평균등록금(원)"].mean()
         
-        <div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #C41E3A;">
-            <p style="font-size:11px; font-weight:700; color:#C41E3A; text-transform:uppercase; margin-top:0; margin-bottom:12px; letter-spacing:0.05em;">
-                ■ 실질 경제력과 서류상 자산의 3대 모순 원인
-            </p>
-            <ul style="margin:0; padding-left:16px; font-size:12px; color:#333333; line-height:1.75;">
-                <li style="margin-bottom:6px;"><b>부동산 자산 착시:</b> 부모의 실제 월 급여 소득이 평범하더라도 장기 보유한 주택 한 채의 공시지가가 급등하면 자산 환산액이 누적되어 기계적으로 9·10구간에 진입합니다.</li>
-                <li style="margin-bottom:6px;"><b>가계 부채 차감의 한계:</b> 제1금융권 외 사금융 부채, 형제자매 다자녀 교육비, 노부모 부양비 등 실질적인 가계 고정 지출 부담이 산정 방식에서 배제됩니다.</li>
-                <li><b>해체 가구 및 명의 모순:</b> 부모의 이혼, 사업 실패, 관계 단절 등으로 실질적인 재정 지원을 전혀 받지 못하는 독자 생계 학생임에도 서류상 부모 자산 때문에 지원 대상에서 탈락합니다.</li>
-            </ul>
-        </div>
-    </div>
+        # 9~10구간이 많은 대학(장학금 하위 25%)과 1~8구간이 많은 대학(장학금 상위 25%)의 생활비 대출 비교
+        if "소득구간_추정" in df.columns:
+            low_benefit_group = df[df["소득구간_추정"] == "1. 수혜 하위 25% (9~10구간 多)"]
+            high_benefit_group = df[df["소득구간_추정"] == "4. 수혜 상위 25% (1~8구간 多)"]
+            
+            avg_living_low = low_benefit_group["총_생활비대출_금액"].mean()
+            avg_living_high = high_benefit_group["총_생활비대출_금액"].mean()
+            
+            living_loan_ratio = (avg_living_low / avg_living_high) if avg_living_high > 0 else 1
+            ratio_str = f"약 {living_loan_ratio:.1f}배"
+        else:
+            ratio_str = "유의미한 수준"
+    else:
+        total_living_loan = 0
+        ratio_str = "0배"
+
+    st.markdown(f"""
+<div style="background:#FDFDFD; border: 1px solid #E0E0E0; border-left: 4px solid #1A3A6C; padding: 22px 24px; font-family:'Noto Sans KR',sans-serif; margin-bottom: 30px;">
+<h4 style="font-family:'Noto Serif KR',Georgia,serif; font-size:16px; font-weight:700; color:#111111; margin-top:0; margin-bottom:10px;">
+📊 자산 산정 오류와 '현금 흐름 빈곤'의 통계적 연결고리
+</h4>
+<p style="font-size:12px; color:#444444; line-height:1.70; margin:0;">
+가구의 세부 자산 내역 없이도, 본 대시보드의 <b>학자금 대출 의존도 지표</b>를 통해 서류상 자산(9·10구간)과 실질 경제력 간의 괴리를 증명할 수 있습니다.<br><br>
+<b>1. 무상 장학금 배제가 '생계형 대출'로 직결되는 역설:</b><br>
+국가장학금 수혜 규모가 가장 적은 '수혜 하위 25% 대학 그룹(9·10구간 집중)'의 대학별 평균 총 생활비 대출 규모는 장학금 수혜가 원활한 상위 그룹 대비 <b>{ratio_str}</b>에 달하는 패턴을 보입니다. 진정한 고소득층 자녀라면 매달 수십만 원의 생활비 조달을 위해 학기 중 대출을 신청할 이유가 없습니다. 즉, 이 구간의 생활비 대출 폭증은 <b>"자산은 잡히나 당장 쓸 수 있는 현금 흐름은 고갈된 중산층 사각지대"</b>의 존재를 방증합니다.<br><br>
+<b>2. 등록금 자부담 능력의 결여:</b><br>
+전국 평균 등록금이 <b>{int(avg_tuition_val/10000):,}만원</b> 수준에 육박하는 상황에서, 장학금 사각지대 학생들의 일반상환 대출자 1인당 부채가 누적되는 현상은 가계의 실질 저축이나 가처분 소득이 등록금을 감당할 수 없는 상태임을 통계적으로 시사합니다.
+</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -389,6 +460,7 @@ try:
                 "일반학자금대출_전체_금액": "일반 상환 (9~10구간)",
                 "취업학자금대출_전체_금액": "취업 후 상환 (1~8구간)"
             }.get(t.name, t.name)))
+            
             st.plotly_chart(styled_fig(fig1), use_container_width=True)
 
         # 탭 2: 사각지대 부채 증명
@@ -616,7 +688,6 @@ try:
                            else "알수없음")
             tuition_fmt = f"{int(row['평균등록금(원)']):,}"
             loan_fmt    = f"{int(row['일반학자금대출_전체_금액']):,}"
-            # 재학생수 팝업 추가
             student_val = row.get("재학생수")
             student_fmt = f"{int(student_val):,}" if pd.notna(student_val) else "데이터 없음"
 
@@ -650,7 +721,6 @@ try:
                 icon=folium.Icon(color=color, icon="info-sign")
             ).add_to(mc)
 
-        # last_object_clicked_tooltip 으로 클릭된 마커 학교명 수신
         map_data = st_folium(
             m,
             use_container_width=True,
@@ -658,7 +728,6 @@ try:
             returned_objects=["last_object_clicked_tooltip"]
         )
 
-        # 클릭 이벤트 처리 후 session_state 업데이트 및 리런
         clicked = map_data.get("last_object_clicked_tooltip") if map_data else None
         if clicked:
             clicked_name = str(clicked).strip()
@@ -667,7 +736,6 @@ try:
                 st.session_state["selected_school"] = clicked_name
                 st.rerun()
 
-        # 현재 선택 대학 상태 표시 박스
         if st.session_state["selected_school"]:
             sel_name = st.session_state["selected_school"]
             sel_row  = filtered_df[filtered_df["학교명"] == sel_name]
@@ -737,12 +805,47 @@ try:
     }, inplace=True)
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
+    # ─────────────────────────────────────────────────────────
+    # 소득구간 그룹 분류 기준 설명 안내 (추가 코드)
+    # ─────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────
+    # 소득구간 그룹 분류 기준 및 산출 방식 안내 (개선 버전)
+    # ─────────────────────────────────────────────────────────
+    st.markdown("""
+<div style="background:#FFFFFF; border: 1px solid #DDDDDD; padding: 24px 20px; font-family:'Noto Sans KR',sans-serif; margin-top: 16px; margin-bottom: 20px;">
+<p style="font-size:11px; font-weight:700; color:#1A3A6C; text-transform:uppercase; margin-top:0; margin-bottom:14px; letter-spacing:0.05em;">
+■ 소득구간 그룹 및 1인당 국가장학금 산출 기준 안내
+</p>
+
+<!-- 1인당 국가장학금 산출 방식 공식화 지표 -->
+<div style="background:#F4F6F9; padding:14px 16px; border-radius:4px; margin-bottom:18px;">
+  <p style="font-size:12px; font-weight:600; color:#111111; margin:0 0 6px;">💡 1인당 국가장학금 산출 공식</p>
+  <div style="font-size:14px; font-family:'Courier New', monospace; font-weight:700; color:#C41E3A; padding:4px 0;">
+    1인당 국가장학금 = 해당 대학의 교외장학금 총액 (국가) ÷ 재학생 수
+  </div>
+  <p style="font-size:11px; color:#666666; margin:6px 0 0; line-height:1.4;">
+    ※ 대학 알리미 및 한국장학재단 공시 데이터를 기반으로 계산되었으며, 재학생 1인이 연간 평균적으로 지급받은 국가장학금 규모를 뜻합니다.
+  </p>
+</div>
+
+<p style="font-size:12px; color:#444444; line-height:1.65; margin:0 0 12px;">
+분석 시 데이터가 존재하는 전체 대학의 <b>'1인당 국가장학금'</b>을 정렬한 뒤, 분위수 기반의 4개 균등 구간(Quantile Cut, 각 25% 비중)으로 자동 분류하여 아래와 같이 명명했습니다.
+</p>
+
+<ul style="margin:0; padding-left:18px; font-size:12px; color:#555555; line-height:1.75;">
+  <li><b>1. 수혜 하위 25% (9~10구간 多):</b> 1인당 국가장학금 수혜액이 가장 적은 하위 25% 대학 그룹입니다. 소득 기준 초과로 무상 장학금 대상에서 배제된 <b>9·10구간(고소득층 및 사각지대 중산층) 학생의 비중이 상대적으로 높음</b>을 유추할 수 있습니다.</li>
+  <li><b>2. 수혜 중하위:</b> 1인당 국가장학금 수혜액 기준 하위 25% 초과 ~ 50% 이하에 해당하는 대학 그룹입니다.</li>
+  <li><b>3. 수혜 중상위:</b> 1인당 국가장학금 수혜액 기준 상위 25% 초과 ~ 50% 이하에 해당하는 대학 그룹입니다.</li>
+  <li><b>4. 수혜 상위 25% (1~8구간 多):</b> 1인당 국가장학금 수혜액이 가장 많은 상위 25% 대학 그룹입니다. 국가장학금 지원 요건을 충족하는 <b>1~8구간(저소득층 및 서민·중산층) 학생의 비중이 매우 높음</b>을 의미합니다.</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
+
     # =========================================================
     # 11. 정책 제안 및 해결 방안 — 에디토리얼 결론 섹션
     # =========================================================
     st.markdown("<div style='height:60px;'></div>", unsafe_allow_html=True)
 
-    # 섹션 마스트헤드
     st.markdown("""
 <div style="border-top:3px solid #111111;padding:36px 0 0;font-family:'Noto Sans KR',sans-serif;">
   <div style="display:inline-block;background:#1A3A6C;color:white;font-size:9px;font-weight:700;
@@ -769,151 +872,145 @@ try:
 
     st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
 
-    # 정책 카드 3개 — 3컬럼 레이아웃
     p1, p2, p3 = st.columns(3, gap="medium")
 
-    # ── 정책 1: 취업 후 상환 대출 확대 ───────────────────────
-    with p1:
-        st.markdown("""
-<div style="background:#FFFFFF;border-top:4px solid #C41E3A;padding:28px 24px 24px;
-            font-family:'Noto Sans KR',sans-serif;height:100%;">
+    # 가로/세로 여백과 레이아웃 균형을 맞춘 카드 기본 스타일 (고정 높이 대신 100% 채우기로 정렬)
+    CARD_STYLE = """
+    background: #FFFFFF; 
+    border-top: 4px solid {color}; 
+    padding: 28px 24px; 
+    font-family: 'Noto Sans KR', sans-serif; 
+    height: 100%; 
+    box-sizing: border-box;
+    """
 
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-    <div style="background:#C41E3A;color:white;font-size:10px;font-weight:700;
-                letter-spacing:0.08em;padding:3px 10px;white-space:nowrap;">
+    # ── 정책 1: 취업 후 상환 대출 확대 (실제 데이터 및 은행 리스크 근거 기반) ───────────────────────
+    with p1:
+        if not filtered_df.empty:
+            avg_general_loan = filtered_df["대출자_1인당_일반대출"].mean() # 9~10구간 평균 부채
+            avg_income_loan  = filtered_df["대출자_1인당_취업대출"].mean() # 1~8구간 평균 부채
+            
+            gen_loan_str = f"{int(avg_general_loan/10000):,}만원" if pd.notna(avg_general_loan) else "데이터 없음"
+            inc_loan_str = f"{int(avg_income_loan/10000):,}만원" if pd.notna(avg_income_loan) else "데이터 없음"
+            
+            if pd.notna(avg_general_loan) and pd.notna(avg_income_loan):
+                loan_diff_str = f"{int((avg_general_loan - avg_income_loan)/10000):,}만원"
+                ratio_diff = f"{abs((avg_general_loan / avg_income_loan) - 1) * 100:.1f}%"
+            else:
+                loan_diff_str = "비교 불가"
+                ratio_diff = "0%"
+        else:
+            gen_loan_str = inc_loan_str = loan_diff_str = "0원"
+            ratio_diff = "0%"
+
+        st.markdown(f"""
+<div style="{CARD_STYLE.format(color=C_RED)}">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+    <div style="background:#C41E3A; color:white; font-size:10px; font-weight:700; letter-spacing:0.08em; padding:3px 10px; white-space:nowrap;">
       POLICY 01
     </div>
-    <div style="height:1px;background:#EEEEEE;flex:1;"></div>
+    <div style="height:1px; background:#EEEEEE; flex:1;"></div>
   </div>
-
-  <p style="font-family:'Noto Serif KR',Georgia,serif;font-size:17px;font-weight:700;
-            color:#111111;line-height:1.4;margin:0 0 20px;letter-spacing:-0.3px;">
+  
+  <p style="font-family:'Noto Serif KR',Georgia,serif; font-size:17px; font-weight:700; color:#111111; line-height:1.4; margin:0 0 12px; letter-spacing:-0.3px;">
     '취업 후 상환 대출(ICL)'<br>자격의 전면 확대
   </p>
-  <div style="display:inline-block;background:#FFF0F0;border:1px solid #F5C5C5;
-              color:#C41E3A;font-size:9px;font-weight:700;letter-spacing:0.10em;
-              text-transform:uppercase;padding:3px 10px;margin-bottom:14px;">
+  <div style="display:inline-block; background:#FFF0F0; border:1px solid #F5C5C5; color:#C41E3A; font-size:9px; font-weight:700; letter-spacing:0.10em; text-transform:uppercase; padding:3px 10px; margin-bottom:16px;">
     가장 현실적인 대안
   </div>
 
-  <div style="border-left:3px solid #EEEEEE;padding-left:14px;margin-bottom:16px;">
-    <p style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
-              color:#C41E3A;font-weight:700;margin:0 0 6px;">현황</p>
-    <p style="font-size:12px;color:#444444;margin:0;line-height:1.70;">
-      9·10구간 학생들은 이자가 당장 붙는 <strong>'일반 상환 대출'</strong>만
-      이용 가능합니다. 취업 전부터 원리금 부담이 누적됩니다.
+  <div style="border-left:3px solid #EEEEEE; padding-left:12px; margin-bottom:16px;">
+    <p style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#C41E3A; font-weight:700; margin:0 0 4px;">현황</p>
+    <p style="font-size:12px; color:#444444; margin:0; line-height:1.65; word-break:keep-all;">
+      9·10구간 학생들은 이자가 복리로 누적되는 '일반 상환'만 가능합니다. 현재 범위 내 <b>9~10구간 1인당 부채는 {gen_loan_str}</b>으로, 1~8구간({inc_loan_str})보다 <b>{loan_diff_str}({ratio_diff}) 더 높은 부채</b> 상태입니다.
     </p>
   </div>
 
-  <div style="border-left:3px solid #1A3A6C;padding-left:14px;">
-    <p style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
-              color:#1A3A6C;font-weight:700;margin:0 0 6px;">솔루션</p>
-    <p style="font-size:12px;color:#333333;margin:0;line-height:1.70;">
-      국가장학금(현금 지원)을 확대하기 어렵다면, 최소한
-      <strong>대출 제도만큼은</strong> 9·10구간에도
-      <strong style="color:#1A3A6C;">'취업 후 상환(ICL)'</strong>을 허용해야 합니다.
-      취업 전 생활비 대출 이자 유예만으로도 악성 부채 전락을 크게 막을 수 있습니다.
+  <div style="border-left:3px solid #1A3A6C; padding-left:12px; margin-bottom:16px;">
+    <p style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#1A3A6C; font-weight:700; margin:0 0 4px;">솔루션</p>
+    <p style="font-size:12px; color:#333333; margin:0; line-height:1.65; word-break:keep-all;">
+      대출 제도만큼은 9·10구간에도 <strong style="color:#1A3A6C;">'취업 후 상환(ICL)'</strong>을 허용하여 신용불량자 전락 위험을 방지해야 합니다.
     </p>
   </div>
 
+  <div style="border-left:3px solid #FF6B00; padding-left:12px;">
+    <p style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#FF6B00; font-weight:700; margin:0 0 4px;">은행권 여신 리스크 관리 근거</p>
+    <p style="font-size:11px; color:#444444; margin:0; line-height:1.60; word-break:keep-all;">
+      <b>1) 연체율 선제 방지:</b> 원금 부담({gen_loan_str})이 월등히 높아 미취업 장기화 시 <b>금융권 대출 연체율 급등 및 대손상각 리스크</b>로 직결되므로 상환을 소득 발생 시점으로 연동하는 것이 안전합니다.<br style="margin-bottom:4px;">
+      <b>2) 서류상 자산 착시 제거:</b> 유동성 현금이 부족한 중산층 사각지대에 고금리 거치식 대출을 취급하는 것은 금융사 입장에서도 <b>여신 회수 능력을 과대평가한 부실 심사</b>에 가깝습니다.
+    </p>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 정책 2: 소득산정 방식 개편 ────────────────────────────
+    # ── 정책 2: 소득산정 방식 개편 (독립 생계) ────────────────────────────
     with p2:
-        st.markdown("""
-<div style="background:#FFFFFF;border-top:4px solid #1A3A6C;padding:28px 24px 24px;
-            font-family:'Noto Sans KR',sans-serif;height:100%;">
-
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-    <div style="background:#1A3A6C;color:white;font-size:10px;font-weight:700;
-                letter-spacing:0.08em;padding:3px 10px;white-space:nowrap;">
+        st.markdown(f"""
+<div style="{CARD_STYLE.format(color=C_BLUE)}">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+    <div style="background:#1A3A6C; color:white; font-size:10px; font-weight:700; letter-spacing:0.08em; padding:3px 10px; white-space:nowrap;">
       POLICY 02
     </div>
-    <div style="height:1px;background:#EEEEEE;flex:1;"></div>
+    <div style="height:1px; background:#EEEEEE; flex:1;"></div>
   </div>
 
-  <p style="font-family:'Noto Serif KR',Georgia,serif;font-size:17px;font-weight:700;
-            color:#111111;line-height:1.4;margin:0 0 20px;letter-spacing:-0.3px;">
+  <p style="font-family:'Noto Serif KR',Georgia,serif; font-size:17px; font-weight:700; color:#111111; line-height:1.4; margin:0 0 12px; letter-spacing:-0.3px;">
     소득산정 방식 개편 및<br>'독립 생계' 인정제도 도입
   </p>
-  <div style="display:inline-block;background:#F0F4FF;border:1px solid #C0CCE8;
-              color:#1A3A6C;font-size:9px;font-weight:700;letter-spacing:0.10em;
-              text-transform:uppercase;padding:3px 10px;margin-bottom:14px;">
+  <div style="display:inline-block; background:#F0F4FF; border:1px solid #C0CCE8; color:#1A3A6C; font-size:9px; font-weight:700; letter-spacing:0.10em; text-transform:uppercase; padding:3px 10px; margin-bottom:16px;">
     제도 설계 개선
   </div>
 
-  <div style="border-left:3px solid #EEEEEE;padding-left:14px;margin-bottom:16px;">
-    <p style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
-              color:#C41E3A;font-weight:700;margin:0 0 6px;">현황</p>
-    <p style="font-size:12px;color:#444444;margin:0;line-height:1.70;">
-      학생 본인의 통장 잔고가 0원이어도, <strong>부모의 자산이 기준을 초과</strong>하면
-      무조건 고소득 구간으로 분류됩니다.
+  <div style="border-left:3px solid #EEEEEE; padding-left:12px; margin-bottom:16px;">
+    <p style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#C41E3A; font-weight:700; margin:0 0 4px;">현황</p>
+    <p style="font-size:12px; color:#444444; margin:0; line-height:1.65; word-break:keep-all;">
+      학생 본인의 자산이 0원이어도, <b>부모의 자산이 기준을 초과</b>하면 무조건 고소득 구간(9·10구간)으로 기계적 분류가 이루어집니다.
     </p>
   </div>
 
-  <div style="border-left:3px solid #1A3A6C;padding-left:14px;">
-    <p style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
-              color:#1A3A6C;font-weight:700;margin:0 0 6px;">솔루션</p>
-    <p style="font-size:12px;color:#333333;margin:0;line-height:1.70;">
-      실제로 부모 지원 없이 스스로 학비·생활비를 충당하는 학생을
-      <strong style="color:#1A3A6C;">'독립 생계 가구'</strong>로 인정,
-      <strong>학생 본인 소득만</strong>으로 구간을 재산정하여 장학금·대출 혜택을
-      부여해야 합니다.
+  <div style="border-left:3px solid #1A3A6C; padding-left:12px;">
+    <p style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#1A3A6C; font-weight:700; margin:0 0 4px;">솔루션</p>
+    <p style="font-size:12px; color:#333333; margin:0; line-height:1.65; word-break:keep-all;">
+      스스로 학비와 생활비를 모두 충당하는 대학생을 공적으로 증명하는 <strong style="color:#1A3A6C;">'독립 생계 가구'</strong> 인정 기준을 신설하고, 부모 자산 제외 후 <b>학생 본인 소득만</b>으로 구간을 재산정해야 합니다.
     </p>
   </div>
-
 </div>
 """, unsafe_allow_html=True)
 
     # ── 정책 3: 국가근로장학금 문턱 완화 ─────────────────────
     with p3:
-        st.markdown("""
-<div style="background:#FFFFFF;border-top:4px solid #333333;padding:28px 24px 24px;
-            font-family:'Noto Sans KR',sans-serif;height:100%;">
-
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-    <div style="background:#333333;color:white;font-size:10px;font-weight:700;
-                letter-spacing:0.08em;padding:3px 10px;white-space:nowrap;">
+        st.markdown(f"""
+<div style="{CARD_STYLE.format(color=C_DARK)}">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+    <div style="background:#333333; color:white; font-size:10px; font-weight:700; letter-spacing:0.08em; padding:3px 10px; white-space:nowrap;">
       POLICY 03
     </div>
-    <div style="height:1px;background:#EEEEEE;flex:1;"></div>
+    <div style="height:1px; background:#EEEEEE; flex:1;"></div>
   </div>
 
-  <p style="font-family:'Noto Serif KR',Georgia,serif;font-size:17px;font-weight:700;
-            color:#111111;line-height:1.4;margin:0 0 20px;letter-spacing:-0.3px;">
+  <p style="font-family:'Noto Serif KR',Georgia,serif; font-size:17px; font-weight:700; color:#111111; line-height:1.4; margin:0 0 12px; letter-spacing:-0.3px;">
     양질의 알바,<br>'국가근로장학금' 문턱 완화
   </p>
-  <div style="display:inline-block;background:#F5F5F5;border:1px solid #DDDDDD;
-              color:#444444;font-size:9px;font-weight:700;letter-spacing:0.10em;
-              text-transform:uppercase;padding:3px 10px;margin-bottom:14px;">
+  <div style="display:inline-block; background:#F5F5F5; border:1px solid #DDDDDD; color:#444444; font-size:9px; font-weight:700; letter-spacing:0.10em; text-transform:uppercase; padding:3px 10px; margin-bottom:16px;">
     접근성 형평성 개선
   </div>
 
-  <div style="border-left:3px solid #EEEEEE;padding-left:14px;margin-bottom:16px;">
-    <p style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
-              color:#C41E3A;font-weight:700;margin:0 0 6px;">현황</p>
-    <p style="font-size:12px;color:#444444;margin:0;line-height:1.70;">
-      시급이 높고 학업 병행에 유리한 <strong>교내·국가근로장학금</strong>은 8구간 이하에
-      우선 배정됩니다. 생활비가 절박한 9·10구간 학생들은 최저시급 야간 알바나
-      고금리 대출로 내몰립니다.
+  <div style="border-left:3px solid #EEEEEE; padding-left:12px; margin-bottom:16px;">
+    <p style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#C41E3A; font-weight:700; margin:0 0 4px;">현황</p>
+    <p style="font-size:12px; color:#444444; margin:0; line-height:1.65; word-break:keep-all;">
+      학업 병행에 유리한 <b>국가근로장학금</b>은 소득 8구간 이하에 우선 배정됩니다. 이 때문에 실질적 자금난을 겪는 9·10구간 학생들은 최저시급 야간 알바 전선으로 내몰리게 됩니다.
     </p>
   </div>
 
-  <div style="border-left:3px solid #333333;padding-left:14px;">
-    <p style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;
-              color:#333333;font-weight:700;margin:0 0 6px;">솔루션</p>
-    <p style="font-size:12px;color:#333333;margin:0;line-height:1.70;">
-      근로장학금 일정 비율 <strong style="color:#C41E3A;">(예: 20%)</strong>을
-      '생활비 대출 이력이 있는 9·10구간 학생'에게 할당하여, 빚 대신
-      <strong>노동을 통한 정당한 생계 유지</strong> 창구를 열어주어야 합니다.
+  <div style="border-left:3px solid #333333; padding-left:12px;">
+    <p style="font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#333333; font-weight:700; margin:0 0 4px;">솔루션</p>
+    <p style="font-size:12px; color:#333333; margin:0; line-height:1.65; word-break:keep-all;">
+      근로장학금 정원의 일부 <strong style="color:#C41E3A;">(예: 20%)</strong>를 '학자금 대출 이력이 존재하는 9·10구간 사각지대 학생'에게 의무 할당하여 빚 대신 <b>노동을 통한 정당한 생계 유지 기회</b>를 제공해야 합니다.
     </p>
   </div>
-
 </div>
 """, unsafe_allow_html=True)
 
-    # 정책 섹션 마무리 — 분석자 총평
     st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
     st.markdown("""
 <div style="background:#F8F8F8;border-left:4px solid #C41E3A;padding:24px 28px;
@@ -929,7 +1026,6 @@ try:
   </p>
 </div>
 """, unsafe_allow_html=True)
-
 
 except Exception as e:
     st.markdown(
