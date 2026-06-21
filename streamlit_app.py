@@ -380,8 +380,9 @@ try:
         with c_b:
             if not filtered_df.empty:
                 insight_box("장학금 수혜액이 적을수록 생활비 대출액이 증가하는 역상관 관계.", C_HIGHLIGHT)
-                fig_b = px.scatter(filtered_df, x="교외장학금 국가", y="총_생활비대출_금액", size="재학생수", color="소득구간_추정",
-                                   color_discrete_sequence=[C_RED, C_HIGHLIGHT, C_GREEN, C_BLUE])
+                fig_b = px.scatter(filtered_df, x="1인당_국가장학금", y="1인당_일반생활비대출", size="재학생수", color="소득구간_추정",
+                   color_discrete_sequence=[C_RED, C_HIGHLIGHT, C_GREEN, C_BLUE],
+                   labels={"1인당_국가장학금": "재학생 1인당 국가장학금(원)", "1인당_일반생활비대출": "1인당 일반 생활비 대출(원)"})
                 fig_b.update_layout(margin=dict(l=10, r=10, t=10, b=10))
                 st.plotly_chart(styled_fig(fig_b, ""), use_container_width=True)
 
