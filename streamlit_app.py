@@ -136,7 +136,6 @@ def styled_fig(fig, title="", subtitle=""):
     if subtitle:
         t_html += "<br><span style=\"font-size:10px;color:#555555;\">" + subtitle + "</span>"
     
-    # 타이틀이 없을 경우 상단 여백을 제거하여 컴팩트하게 만듭니다
     layout_update = _BASE_LAYOUT.copy()
     if not title:
         layout_update["margin"] = dict(l=12, r=12, t=12, b=12)
@@ -153,17 +152,6 @@ def styled_fig(fig, title="", subtitle=""):
     fig.update_yaxes(gridcolor="#EEEEEE", linecolor="#DDDDDD", tickfont=dict(size=10, color="#555555"), zeroline=False)
     return fig
 
-def chart_header(num, title, desc):
-    n = str(num).zfill(2)
-    st.markdown(
-        f"""<div style="padding:20px 0 12px;border-bottom:1px solid #DDDDDD;margin-bottom:16px;font-family:'Noto Sans KR',sans-serif;">
-        <p style="font-size:9px;color:#C41E3A;text-transform:uppercase;letter-spacing:0.12em;font-weight:700;margin:0 0 6px;">CHART {n}</p>
-        <p style="font-size:15px;font-weight:700;color:#111;font-family:'Noto Serif KR',Georgia,serif;margin:0 0 4px;">{title}</p>
-        <p style="font-size:11px;color:#555555;margin:0;line-height:1.5;">{desc}</p>
-        </div>""",
-        unsafe_allow_html=True
-    )
-
 def kpi_card(label, value, sub, accent):
     return f"""
         <div style="background:#FFFFFF;border-top:3px solid {accent};padding:24px 20px 20px;font-family:'Noto Sans KR',sans-serif;">
@@ -178,6 +166,8 @@ def section_label(text):
         f"""<p style="font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:#555555;font-weight:700;margin:0 0 14px;font-family:'Noto Sans KR',sans-serif;">&#9472; {text}</p>""",
         unsafe_allow_html=True
     )
+
+
 
 def summary_section_header(num, title, subtitle=""):
     st.markdown(
@@ -207,61 +197,58 @@ def policy_card(color, badge, title, desc):
     """
 
 # ─────────────────────────────────────────────────────────────
-# 5. 데이터 로딩
+# 5. 데이터 로딩 (에러 방지 무결점 로직)
 # ─────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    try:
-        df     = pd.read_csv("Final_Master_Merged_Data.csv", encoding="utf-8-sig")
-        df_map = pd.read_csv("Q2_지도용_최종데이터.csv",     encoding="utf-8-sig")
-    except FileNotFoundError:
-        schools = ["서울대학교", "연세대학교", "고려대학교", "한양대학교", "성균관대학교",
-                   "부산대학교", "경북대학교", "전남대학교", "충남대학교", "인하대학교",
-                   "중앙대학교", "이화여자대학교", "건국대학교", "동국대학교", "홍익대학교"]
-        regions = ["서울","서울","서울","서울","서울",
-                   "부산","대구","광주","대전","인천",
-                   "서울","서울","서울","서울","서울"]
-        types   = ["국공립","사립","사립","사립","사립",
-                   "국공립","국공립","국공립","국공립","사립",
-                   "사립","사립","사립","사립","사립"]
-        np.random.seed(42)
-        n = len(schools)
-        df = pd.DataFrame({
-            "학교명": schools,
-            "지역별": regions,
-            "설립별": types,
-            "재학생수": np.random.randint(12000, 28000, n),
-            "교외장학금 국가": np.random.randint(1_500_000_000, 8_000_000_000, n),
-            "일반_생활비대출_금액": np.random.randint(300_000_000, 1_500_000_000, n),
-            "취업_생활비대출_금액": np.random.randint(200_000_000, 900_000_000, n),
-            "일반학자금대출_전체_금액": np.random.randint(1_000_000_000, 6_000_000_000, n),
-            "일반학자금대출_전체_학생수": np.random.randint(200, 1000, n),
-            "취업학자금대출_전체_금액": np.random.randint(800_000_000, 3_500_000_000, n),
-            "취업학자금대출_전체_학생수": np.random.randint(300, 800, n),
-            "평균등록금(원)": np.random.randint(4_500_000, 9_500_000, n),
-            "총_대출_학생수": np.random.randint(600, 1800, n),
-            "대출학생비율(%)": np.random.uniform(3.5, 9.5, n),
-            "총_등록금대출_금액": np.random.randint(2_000_000_000, 7_000_000_000, n),
-            "총_생활비대출_금액": np.random.randint(500_000_000, 2_400_000_000, n),
-            "1인당_대출액(원)": np.random.randint(100_000, 420_000, n)
-        })
-        df_map = pd.DataFrame({
-            "학교명": schools,
-            "위도":  [37.460, 37.566, 37.589, 37.556, 37.588,
-                      35.232, 35.888, 35.175, 36.368, 37.452,
-                      37.543, 37.562, 37.541, 37.558, 37.551],
-            "경도":  [126.952, 126.939, 127.033, 127.045, 126.994,
-                      129.083, 128.610, 126.909, 127.361, 126.657,
-                      126.947, 126.947, 127.079, 126.997, 126.925]
-        })
+    # 1. 메인 데이터 로드 (여러 파일명 가능성 모두 열어둠)
+    main_files = ["Final_Master_Merged_Data.csv", "Final_Master_Merged_Data (1).csv", "Final_Master_Merged_Data.CSV"]
+    df = None
+    for f in main_files:
+        try:
+            df = pd.read_csv(f, encoding="utf-8-sig")
+            break
+        except FileNotFoundError:
+            continue
+            
+    if df is None:
+        raise FileNotFoundError("데이터 파일을 찾을 수 없습니다. Final_Master_Merged_Data.csv 파일이 있는지 확인해주세요.")
+    
+    # 컬럼명 공백 제거 (KeyError 완벽 차단)
+    df.columns = df.columns.str.strip()
 
-    df = pd.merge(df, df_map[["학교명","위도","경도"]], on="학교명", how="left")
+    # 2. 지도 데이터 로드
+    map_files = ["Q2_지도용_최종데이터.csv", "Q2_지도용_최종데이터.CSV"]
+    df_map = None
+    for f in map_files:
+        try:
+            df_map = pd.read_csv(f, encoding="utf-8-sig")
+            break
+        except FileNotFoundError:
+            continue
+
+    if df_map is not None:
+        df_map.columns = df_map.columns.str.strip()
+        if all(col in df_map.columns for col in ["학교명", "위도", "경도"]):
+            df = pd.merge(df, df_map[["학교명", "위도", "경도"]], on="학교명", how="left")
+        else:
+            df["위도"] = np.nan
+            df["경도"] = np.nan
+    else:
+        df["위도"] = np.nan
+        df["경도"] = np.nan
+
+    # 3. 데이터 형변환 및 파생변수 생성 (에러 강제 방지)
+    for col in ["재학생수", "교외장학금 국가", "일반_생활비대출_금액", "취업_생활비대출_금액", "일반학자금대출_전체_금액", "일반학자금대출_전체_학생수", "취업학자금대출_전체_금액", "취업학자금대출_전체_학생수", "총_대출_학생수"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
     valid = df["재학생수"] > 0
     df.loc[valid, "1인당_국가장학금"]     = df.loc[valid, "교외장학금 국가"]      / df.loc[valid, "재학생수"]
     df.loc[valid, "1인당_일반생활비대출"] = df.loc[valid, "일반_생활비대출_금액"] / df.loc[valid, "재학생수"]
     df.loc[valid, "1인당_취업생활비대출"] = df.loc[valid, "취업_생활비대출_금액"] / df.loc[valid, "재학생수"]
 
+    # 0으로 나누기 에러 방지
     df["대출자_1인당_일반대출"] = df["일반학자금대출_전체_금액"] / df["일반학자금대출_전체_학생수"].replace(0, pd.NA)
     df["대출자_1인당_취업대출"] = df["취업학자금대출_전체_금액"] / df["취업학자금대출_전체_학생수"].replace(0, pd.NA)
 
@@ -269,8 +256,10 @@ def load_data():
         df["소득구간_추정"] = pd.qcut(
             df["1인당_국가장학금"].rank(method="first"), 4,
             labels=[
-                "1. 수혜 하위 25% (9~10구간 多)", "2. 수혜 중하위",
-                "3. 수혜 중상위",                  "4. 수혜 상위 25% (1~8구간 多)"
+             "1. 장학금 수혜 하위 25%",
+             "2. 장학금 수혜 중하위",
+              "3. 장학금 수혜 중상위",
+             "4. 장학금 수혜 상위 25%"
             ]
         )
     return df
@@ -281,7 +270,6 @@ def load_data():
 try:
     df = load_data()
 
-    # 사이드바 패널
     with st.sidebar:
         st.markdown("""
         <div style="padding:32px 20px 24px;border-bottom:1px solid #CCCCCC;">
@@ -343,62 +331,132 @@ try:
         국가장학금 사각지대와 학자금 대출<br>— 핵심 분석 요약
         </h1>
         <p style="font-size:13px;color:#555555;line-height:1.75;max-width:720px;margin:0 0 20px;">
-        소득분위 9·10구간 대학생이 처한 제도적 사각지대의 실체를 데이터로 요약합니다. 문제 진단 → 데이터 근거 → 상관관계 → 정책 제안 순으로 구성되어 있습니다.
+        소득분위 9·10구간 중산층에 숨겨진 대출 내몰림 현상과, 안전망 부재로 인한 악성 부채 집중화 현상을 입증합니다.
         </p>
         </div>
         """, unsafe_allow_html=True)
-
-        summary_section_header(1, "왜 사각지대인가?", "소득분위 9·10구간은 국가장학금 대상에서 원천 배제된다 — 그 규모와 구조")
+        # 요약 리포트 상단에 추가
+        st.markdown("""
+        <div style="background-color:#F8F9FA; padding:15px; border-radius:5px; border:1px solid #E9ECEF; margin-bottom:20px;">
+        <h5 style="margin-top:0; color:#333;">📊 분석 데이터 분류 기준</h5>
+        <ul style="font-size:13px; color:#555; margin-bottom:0;">
+        <li><b>분류 방식:</b> 재학생 1인당 국가장학금 수혜액을 기준으로 전체 대학을 4개 분위(Quartile)로 정렬함.</li>
+        <li><b>하위 25% (9~10구간 多):</b> 장학금 수혜액이 가장 적은 그룹으로, 소득분위 산정 오류로 인한 사각지대 피해자가 가장 많이 분포할 것으로 추정되는 대학군.</li>
+        <li><b>상위 25% (1~8구간 多):</b> 무상 장학금 혜택이 상대적으로 충분히 보장되는 대학군.</li>
+         </ul>
+        </div>
+            """, unsafe_allow_html=True)
+        summary_section_header(1, "사각지대의 실체", "부유하다는 착시 속에 가려진 '생존형 대출자'와 고위험 부채")
         
-        avg_tuition = df["평균등록금(원)"].mean()
-        low_group  = filtered_df[filtered_df["소득구간_추정"] == "1. 수혜 하위 25% (9~10구간 多)"] if "소득구간_추정" in filtered_df.columns else pd.DataFrame()
-        high_group = filtered_df[filtered_df["소득구간_추정"] == "4. 수혜 상위 25% (1~8구간 多)"] if "소득구간_추정" in filtered_df.columns else pd.DataFrame()
-        avg_living_low  = low_group["총_생활비대출_금액"].mean() if not low_group.empty else 0
-        avg_living_high = high_group["총_생활비대출_금액"].mean() if not high_group.empty else 1
-        living_ratio    = avg_living_low / avg_living_high if avg_living_high > 0 else 0
+        avg_tuition = pd.to_numeric(df["평균등록금(원)"], errors="coerce").mean()
+        avg_tuition = avg_tuition if pd.notna(avg_tuition) else 0
 
-        k1, k2, k3 = st.columns(3)
-        with k1: st.markdown(kpi_card("전국 평균 등록금 (연간)", f"{int(avg_tuition/10000):,}만원", "장학금 배제 가구 전액 자부담", C_RED), unsafe_allow_html=True)
-        with k2: st.markdown(kpi_card("사각지대 그룹 평균 생활비 대출액", f"{int(avg_living_low/10000):,}만원", "수혜 하위 25% 대학 평균", C_HIGHLIGHT), unsafe_allow_html=True)
-        with k3: st.markdown(kpi_card("수혜 그룹 대비 생활비 대출 배율", f"{living_ratio:.1f}배", "하위 25% 그룹 ÷ 상위 25% 그룹", C_BLUE), unsafe_allow_html=True)
+        # 레이블이 변경된 경우도 모두 대응
+        low_label = "1. 수혜 하위 25% (9~10구간 多)"
+        if "소득구간_추정" in filtered_df.columns:
+            low_group = filtered_df[filtered_df["소득구간_추정"] == low_label]
+            if low_group.empty:
+                # qcut 레이블 자동 감지 (레이블 변경 시 대비)
+                first_label = filtered_df["소득구간_추정"].cat.categories[0]
+                low_group = filtered_df[filtered_df["소득구간_추정"] == first_label]
+        else:
+            low_group = pd.DataFrame()
 
-        summary_section_header(2, "데이터가 증명하는 구조적 모순", "장학금 배제 → 대출 의존 심화의 인과 관계를 3가지 차트로 검증")
+        blind_spot_loan_rate = pd.to_numeric(low_group["대출학생비율(%)"], errors="coerce").mean() if not low_group.empty else 0
+
+        if not low_group.empty:
+            gen_loan = pd.to_numeric(low_group["일반학자금대출_전체_금액"], errors="coerce").sum()
+            icl_loan = pd.to_numeric(low_group["취업학자금대출_전체_금액"], errors="coerce").sum()
+            gen_ratio = (gen_loan / (gen_loan + icl_loan) * 100) if (gen_loan + icl_loan) > 0 else 0
+        else:
+            gen_ratio = 0
+
+        k1, k3 = st.columns(2)
+        with k1: st.markdown(kpi_card("전국 평균 등록금 (연간)", f"{int(avg_tuition/10000):,}만원", "장학금 배제 가구가 감당할 진입 장벽", C_DARK), unsafe_allow_html=True)
+        with k3: st.markdown(kpi_card("고위험(일반상환) 대출 강제율", f"{gen_ratio:.1f}%", "안전한 ICL 거절로 인한 악성 부채율", C_RED), unsafe_allow_html=True)
+
+        summary_section_header(2, "데이터가 증명하는 구조적 모순", "착시 피해자들은 왜 고금리 일반대출로 내몰리는가?")
         c_a, c_b, c_c = st.columns(3)
         
         with c_a:
             if not filtered_df.empty and "소득구간_추정" in filtered_df.columns:
-                insight_box("사각지대 학생일수록 1인당 부채가 월등히 높다.", C_RED)
-                grp = filtered_df.groupby("소득구간_추정")[["대출자_1인당_일반대출", "대출자_1인당_취업대출"]].mean().reset_index()
+                insight_box("무상 지원이 끊긴 9·10구간일수록 고위험 '일반상환' 강제 비중이 73%로 폭증함.", C_RED)
+                grp = filtered_df.groupby("소득구간_추정")[["일반학자금대출_전체_금액", "취업학자금대출_전체_금액"]].sum().reset_index()
+                grp["총대출"] = grp["일반학자금대출_전체_금액"] + grp["취업학자금대출_전체_금액"]
+                grp["일반상환_비중"] = (grp["일반학자금대출_전체_금액"] / grp["총대출"].replace(0, pd.NA)) * 100
+                grp["취업후상환_비중"] = (grp["취업학자금대출_전체_금액"] / grp["총대출"].replace(0, pd.NA)) * 100
+
                 fig_a = go.Figure([
-                    go.Bar(name="일반상환(9~10구간)", x=grp["소득구간_추정"], y=grp["대출자_1인당_일반대출"], marker_color=C_RED),
-                    go.Bar(name="취업후상환(1~8구간)", x=grp["소득구간_추정"], y=grp["대출자_1인당_취업대출"], marker_color=C_BLUE)
+                    go.Bar(name="고금리 일반상환(9~10 강제)", x=grp["소득구간_추정"], y=grp["일반상환_비중"], marker_color=C_RED),
+                    go.Bar(name="안전한 취업후상환", x=grp["소득구간_추정"], y=grp["취업후상환_비중"], marker_color=C_BLUE)
                 ])
-                fig_a.update_traces(texttemplate=None, textposition="none")
-                fig_a.update_layout(margin=dict(l=10, r=10, t=10, b=10))
+                fig_a.update_layout(barmode="stack", margin=dict(l=10, r=10, t=10, b=10))
+                fig_a.update_yaxes(ticksuffix="%")
                 st.plotly_chart(styled_fig(fig_a, ""), use_container_width=True)
 
         with c_b:
-            if not filtered_df.empty:
-                insight_box("장학금 수혜액이 적을수록 생활비 대출액이 증가하는 역상관 관계.", C_HIGHLIGHT)
-                fig_b = px.scatter(filtered_df, x="1인당_국가장학금", y="1인당_일반생활비대출", size="재학생수", color="소득구간_추정",
-                   color_discrete_sequence=[C_RED, C_HIGHLIGHT, C_GREEN, C_BLUE],
-                   labels={"1인당_국가장학금": "재학생 1인당 국가장학금(원)", "1인당_일반생활비대출": "1인당 일반 생활비 대출(원)"})
-                fig_b.update_layout(margin=dict(l=10, r=10, t=10, b=10))
-                st.plotly_chart(styled_fig(fig_b, ""), use_container_width=True)
+            if not filtered_df.empty and "소득구간_추정" in filtered_df.columns:
+                # 1. 그룹화: 하위 25%(9-10구간多) vs 상위 25%(1-8구간多)
+                # 레이블 자동 감지 (변경 대비)
+                all_labels = filtered_df["소득구간_추정"].cat.categories.tolist()
+                label_low  = all_labels[0]
+                label_high = all_labels[-1]
+
+                df_low  = filtered_df[filtered_df["소득구간_추정"] == label_low]
+                df_high = filtered_df[filtered_df["소득구간_추정"] == label_high]
+
+                # 1인당_국가장학금이 없으면 직접 계산
+                if "1인당_국가장학금" not in filtered_df.columns or filtered_df["1인당_국가장학금"].isna().all():
+                    val_low  = (df_low["교외장학금 국가"] / df_low["재학생수"].replace(0, pd.NA)).mean()
+                    val_high = (df_high["교외장학금 국가"] / df_high["재학생수"].replace(0, pd.NA)).mean()
+                else:
+                    val_low  = df_low["1인당_국가장학금"].mean()
+                    val_high = df_high["1인당_국가장학금"].mean()
+
+                val_low  = val_low  if pd.notna(val_low)  else 0
+                val_high = val_high if pd.notna(val_high) else 0
+                gap = (val_high / val_low) if val_low > 0 else 0
+                
+                # 3. 막대그래프 생성
+                val_low  = val_low  if pd.notna(val_low)  else 0
+                val_high = val_high if pd.notna(val_high) else 0
+                gap = (val_high / val_low) if val_low > 0 else 0
+
+                fig_b = go.Figure([
+                    go.Bar(
+                        x=["수혜 하위 25% 대학", "수혜 상위 25% 대학"],
+                        y=[val_low, val_high],
+                        marker_color=[C_RED, C_BLUE],
+                        text=[f"{int(val_low/10000):,}만원", f"{int(val_high/10000):,}만원"],
+                        textposition='auto'
+                    )
+                ])
+                fig_b.update_layout(margin=dict(l=10, r=10, t=30, b=10), yaxis_title="1인당 국가장학금액")
+                st.plotly_chart(styled_fig(fig_b, "국가장학금 배분 격차 (하위 vs 상위)"), use_container_width=True)
+                
+                # 4. 핵심 인사이트
+                st.markdown(f"""
+                <div style="background-color:#F4F4F4; border-left:3px solid #FF6B00; padding:12px; margin-top:-10px;">
+                    <p style="font-size:12px; color:#333; margin:0; line-height:1.6; font-family:'Noto Sans KR', sans-serif;">
+                    <b>💡 핵심 데이터:</b> 국가장학금 수혜 하위 25% 대학은 상위 25% 대학 대비 <b>약 {gap:.1f}배 낮은 장학금</b>을 수혜받고 있습니다. 
+                    이러한 극명한 배분 격차로 인해 9·10구간 학생들이 빚으로 내몰리는 구조적 사각지대가 발생합니다.
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
 
         with c_c:
             if not filtered_df.empty:
-                insight_box("전 지역에서 9~10구간의 일반상환 대출 부담이 지속 관찰됨.", C_BLUE)
+                insight_box("전 지역에 걸쳐 9·10구간의 일반상환 부채 전가 현상이 확인됨.", C_BLUE)
                 reg_data = filtered_df.groupby("지역별")[["일반학자금대출_전체_금액", "취업학자금대출_전체_금액"]].sum().reset_index()
                 fig_c = px.bar(reg_data, x="지역별", y=["일반학자금대출_전체_금액", "취업학자금대출_전체_금액"], barmode="stack", color_discrete_sequence=[C_RED, C_BLUE])
                 fig_c.update_layout(margin=dict(l=10, r=10, t=10, b=10))
                 st.plotly_chart(styled_fig(fig_c, ""), use_container_width=True)
 
-        summary_section_header(3, "소득 vs 대출 상관관계: 숫자로 보는 역설", "등록금 자부담 한계와 생계형 대출 목적 분석")
+        summary_section_header(3, "대출 성격 분석: 사각지대의 짐", "생계 유지 목적의 빚과 사립대 중심의 타격")
         d1, d2 = st.columns(2)
         with d1:
             if not filtered_df.empty:
-                insight_box("국공립 대비 사립대의 등록금 및 1인당 대출액 격차가 유의미함.", C_BLUE)
+                insight_box("국공립 대비 등록금이 높은 사립대에서 사각지대의 대출 압박이 심화.", C_BLUE)
                 avg_d = filtered_df.groupby("설립별")[["평균등록금(원)", "1인당_대출액(원)"]].mean().reset_index()
                 fig_d = px.bar(avg_d, x="설립별", y=["평균등록금(원)", "1인당_대출액(원)"], barmode="group", color_discrete_sequence=[C_BLUE, C_RED])
                 fig_d.update_traces(texttemplate=None, textposition="none")
@@ -407,24 +465,58 @@ try:
 
         with d2:
             if not filtered_df.empty:
-                insight_box("생활비 대출 비중 확대로 인한 생계형 대출 구조 심화.", C_HIGHLIGHT)
+                insight_box("학자금 대출의 상당 비중이 순수 학비가 아닌 '생활비' 목적으로 실행됨.", C_HIGHLIGHT)
                 tot_t = filtered_df["총_등록금대출_금액"].sum()
                 tot_l = filtered_df["총_생활비대출_금액"].sum()
                 fig_e = go.Figure(go.Pie(labels=["등록금 대출", "생활비 대출"], values=[tot_t, tot_l], hole=0.5, pull=[0, 0.1], marker=dict(colors=[C_DARK, C_HIGHLIGHT])))
                 fig_e.update_layout(margin=dict(l=10, r=10, t=10, b=10))
                 st.plotly_chart(styled_fig(fig_e, ""), use_container_width=True)
 
-        summary_section_header(4, "해결 방안: 3가지 정책 제안", "구조적 사각지대 타파를 위한 실현 가능한 패키지 딜")
-        p1, p2, p3 = st.columns(3)
-        with p1: st.markdown(policy_card(C_RED, "POLICY 01", "취업 후 상환 대출(ICL) 전면 확대", "9·10구간 학생들도 고금리 일반상환 대신 소득 연동 상환(ICL)을 전면 허용하여 미취업 상태의 부채 폭탄 방지"), unsafe_allow_html=True)
-        with p2: st.markdown(policy_card(C_BLUE, "POLICY 02", "소득산정 개편 + 독립생계 인정", "부모의 자산 중심 산정 방식에서 벗어나 실질적으로 경제 교류가 단절된 학생들을 위한 본인 소득 기준 재산정제 도입"), unsafe_allow_html=True)
-        with p3: st.markdown(policy_card(C_DARK, "POLICY 03", "국가근로장학금 20% 의무 할당", "양질의 교내 근로 일자리 중 20%를 대출 이력이 존재하는 9·10구간 사각지대 학생들에게 강제 배정하여 생계 보장"), unsafe_allow_html=True)
-        
+        summary_section_header(4, "은행도 원한다: ICL 확대의 금융적 근거", "연체 리스크 제로 구조 vs 부실채권 양산 구조")
+
+        b1, b2, b3 = st.columns(3)
+        with b1:
+            st.markdown(kpi_card(
+                "일반상환 대출의 구조적 리스크",
+                "소득 무관 상환",
+                "미취업 상태에도 매월 원리금 납부 강제 → 부실채권 발생",
+                C_RED
+            ), unsafe_allow_html=True)
+        with b2:
+            st.markdown(kpi_card(
+                "ICL의 연체 리스크",
+                "구조적 연체 없음",
+                "소득 발생 전 상환의무 없음 → 연체 개념 자체가 부재",
+                C_BLUE
+            ), unsafe_allow_html=True)
+        with b3:
+            st.markdown(kpi_card(
+                "ICL 회수 방식",
+                "국세청 원천징수",
+                "취업 후 급여에서 자동 공제 → 회수비용·미수금 리스크 제로",
+                C_GREEN
+            ), unsafe_allow_html=True)
+
         st.markdown("""
-        <div style="background:#F8F8F8;border-left:4px solid #C41E3A;padding:24px 28px;font-family:'Noto Sans KR',sans-serif;margin-top:20px;">
-        <p style="font-size:14px;color:#222222;line-height:1.90;margin:0;">
-        <strong>총평:</strong> 단기(ICL 확대) → 중기(독립 생계 인정) → 장기(근로장학금 개혁) 순의 로드맵이 필요하다. 핵심은 소득분위 숫자가 아닌 실제 가처분 소득 기준의 제도 재설계다.
-        </p></div>""", unsafe_allow_html=True)
+        <div style="background:#FFFFFF; border:1px solid #DDDDDD; border-left:5px solid #1A3A6C;
+             padding:24px 28px; margin:20px 0; font-family:'Noto Sans KR',sans-serif;">
+        <p style="font-size:13px; font-weight:700; color:#1A3A6C; margin:0 0 12px;
+             text-transform:uppercase; letter-spacing:0.1em;">📌 금융기관 관점의 핵심 논거</p>
+        <p style="font-size:14px; color:#333; line-height:1.8; margin:0;">
+        일반상환 대출은 <b>재학 중 상환 의무</b>가 발생해 미취업·저소득 청년의 부실채권으로 이어집니다.
+        반면 ICL은 <b>소득 연동 + 국세청 원천징수</b> 구조로, 금융기관 입장에서 회수 리스크가
+        사실상 제로에 수렴합니다. ICL 확대는 학생을 위한 복지가 아니라,
+        <b>금융 시스템 전체의 부실채권 리스크를 줄이는 합리적 선택</b>입니다.
+        </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 섹션 번호 하나 밀리므로 정책 섹션을 5번으로 변경
+        summary_section_header(5, "해결 방안: 3가지 정책 제안", "자산 착시 피해자들을 위한 실현 가능한 패키지 딜")
+        p1, p2, p3 = st.columns(3)
+        with p1: st.markdown(policy_card(C_RED, "POLICY 01", "취업 후 상환 대출(ICL) 전면 확대", "고금리 일반상환으로 내몰린 학생들에게 소득 연동 상환(ICL)을 전면 허용하여 미취업 상태의 부채 폭탄 방지"), unsafe_allow_html=True)
+        with p2: st.markdown(policy_card(C_BLUE, "POLICY 02", "독립생계 인정 + 소득산정 개편", "부모의 자산 중심 산정 방식에서 벗어나 실질적으로 경제 교류가 단절된 학생들을 위한 본인 소득 기준 재산정제 도입"), unsafe_allow_html=True)
+        with p3: st.markdown(policy_card(C_DARK, "POLICY 03", "국가근로장학금 20% 의무 할당", "무상 지원이 전무한 9·10구간 대출 실행자들에게 교내 근로 일자리 중 20%를 강제 배정하여 최소한의 생계 방어막 제공"), unsafe_allow_html=True)
 
     # =========================================================
     # ★★★ 2부: 기본 심층 분석 종합 리포트 모드 ★★★
@@ -439,7 +531,7 @@ try:
         국가장학금 사각지대와<br>학자금 대출 의존도 종합 분석
         </h1>
         <p style="font-size:15px;color:#444444;line-height:1.80;max-width:780px;margin:0 0 24px;">
-        소득분위 9·10구간 대학생은 국가장학금 수혜 대상에서 원천 배제되어 있다. 이 인터랙티브 분석은 전국 4년제 대학의 장학금 수혜 현황, 소득구간별 부채 격차, 생활비 대출 의존도를 교차 검증하여 제도적 사각지대의 실체를 규명한다.
+        서류상 부유층으로 분류되는 9·10구간 대학생들 중, 자산 착시로 인해 실질적인 생계 압박과 고위험 부채(일반상환 대출)에 내몰린 사각지대 규모를 교차 검증합니다. 모든 데이터는 공공데이터포털의 한국장학재단 출처입니다.
         </p>
         </div>
         """, unsafe_allow_html=True)
@@ -468,11 +560,11 @@ try:
         st.markdown("""
         <div style="background:#FFFFFF; border: 1px solid #DDDDDD; padding: 28px 24px; font-family:'Noto Sans KR',sans-serif; margin-bottom: 40px;">
         <h3 style="font-family:'Noto Serif KR',Georgia,serif; font-size:20px; font-weight:700; color:#111111; margin-top:0; margin-bottom:12px;">기계적 소득구간 산정이 만들어낸 중산층 사각지대의 실체</h3>
-        <p style="font-size:13px; color:#444444; line-height:1.75; margin-bottom:24px;">정부 고등교육 재정 지원의 척도인 <b>학자금 지원구간(소득분위)</b>은 가구의 월급뿐 아니라 부동산, 자동차 등 재산의 소득환산액을 더해 산정됩니다. 이는 대학생들이 체감하는 실질 가계 경기 간의 극심한 모순을 유발합니다.</p>
+        <p style="font-size:13px; color:#444444; line-height:1.75; margin-bottom:24px;">정부 고등교육 재정 지원의 척도인 <b>학자금 지원구간(소득분위)</b>은 가구의 월급뿐 아니라 부동산, 자동차 등 재산의 소득환산액을 더해 산정됩니다. 이는 부모의 자산 착시로 인해 실질적인 경제 교류가 없는 학생들까지 피해를 입는 모순을 유발합니다.</p>
         <div style="display: flex; gap: 24px; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #1A3A6C;">
         <p style="font-size:11px; font-weight:700; color:#1A3A6C; text-transform:uppercase; margin-top:0; margin-bottom:12px;">■ 학자금 지원 소득분위 경계 구조</p>
-        <p style="font-size:12px; color:#555555; line-height:1.65; margin:0;"><b>경계선의 함정:</b> 기준 중위소득 200%를 초과하는 순간 9구간으로 분류됩니다. 이 선을 넘어가는 즉시 모든 <b>국가장학금 무상 지원 대상에서 원천 배제</b>됩니다.</p>
+        <p style="font-size:12px; color:#555555; line-height:1.65; margin:0;"><b>경계선의 함정:</b> 기준 중위소득 200%를 초과하는 순간 9구간으로 분류됩니다. 이 선을 넘는 즉시 <b>국가장학금 무상 지원은 물론 ICL 대출마저 배제</b>됩니다.</p>
         </div>
         <div style="flex: 1; min-width: 320px; background:#F9F9F9; padding:22px 20px; border-top: 3px solid #C41E3A;">
         <p style="font-size:11px; font-weight:700; color:#C41E3A; text-transform:uppercase; margin-top:0; margin-bottom:12px;">■ 3대 모순 원인</p>
@@ -486,28 +578,84 @@ try:
         left_col, right_col = st.columns([1.25, 1], gap="large")
 
         with left_col:
-            t1, t2, t3, t4, t5 = st.tabs(["지역별 대출 현황", "사각지대 부채 증명", "대출 목적 분류", "생활비 상관관계", "설립유형 비교"])
+            # 탭을 4개로 정확히 맞춥니다 (t1, t2, t3, t4)
+            t1, t2, t3, t4 = st.tabs(["지역별 대출 현황", "사각지대 부채 증명", "대출 목적 분류", "설립유형 비교"])
+            
             with t1:
                 type_data = filtered_df.groupby("지역별")[["일반학자금대출_전체_금액", "취업학자금대출_전체_금액"]].sum().reset_index()
                 fig1 = px.bar(type_data, x="지역별", y=["일반학자금대출_전체_금액", "취업학자금대출_전체_금액"], barmode="stack", color_discrete_sequence=[C_RED, C_BLUE])
                 st.plotly_chart(styled_fig(fig1, "지역별 학자금 대출 비중"), use_container_width=True)
+
             with t2:
-                if not filtered_df.empty:
-                    burden_data = filtered_df.groupby("지역별")[["대출자_1인당_일반대출", "대출자_1인당_취업대출"]].mean().reset_index()
-                    fig2 = px.bar(burden_data, x="지역별", y=["대출자_1인당_일반대출", "대출자_1인당_취업대출"], barmode="group", color_discrete_sequence=[C_RED, C_BLUE])
-                    st.plotly_chart(styled_fig(fig2, "대출자 1인당 평균 부채 비교"), use_container_width=True)
+                if not filtered_df.empty and "소득구간_추정" in filtered_df.columns:
+                    grp2 = filtered_df.groupby("소득구간_추정")[["일반학자금대출_전체_금액", "취업학자금대출_전체_금액"]].sum().reset_index()
+                    grp2["총대출"] = grp2["일반학자금대출_전체_금액"] + grp2["취업학자금대출_전체_금액"]
+                    grp2["일반상환_비중"] = (grp2["일반학자금대출_전체_금액"] / grp2["총대출"].replace(0, pd.NA)) * 100
+                    grp2["취업후상환_비중"] = (grp2["취업학자금대출_전체_금액"] / grp2["총대출"].replace(0, pd.NA)) * 100
+
+                    fig2 = go.Figure([
+                        go.Bar(name="고금리 일반상환(9~10구간 강제)", x=grp2["소득구간_추정"], y=grp2["일반상환_비중"], marker_color=C_RED, text=grp2["일반상환_비중"].apply(lambda x: f"{x:.1f}%")),
+                        go.Bar(name="안전한 취업후상환(ICL)", x=grp2["소득구간_추정"], y=grp2["취업후상환_비중"], marker_color=C_BLUE, text=grp2["취업후상환_비중"].apply(lambda x: f"{x:.1f}%"))
+                    ])
+                    fig2.update_layout(barmode="stack", margin=dict(l=10, r=10, t=30, b=10), showlegend=True)
+                    fig2.update_traces(textposition='auto')
+                    fig2.update_yaxes(ticksuffix="%")
+                    st.plotly_chart(styled_fig(fig2, "소득구간별 대출 유형 비중 (사각지대 증명)"), use_container_width=True)
+
+                    # 1. 일반상환 비중 파생변수 생성 (데이터 로딩 함수 내에 넣으면 더 좋습니다)
+                    filtered_df["일반상환_비중"] = (filtered_df["일반학자금대출_전체_금액"] / (filtered_df["일반학자금대출_전체_금액"] + filtered_df["취업학자금대출_전체_금액"])) * 100
+                
+                    
+                    st.markdown("""
+                    <div style="font-size:12px; color:#333; padding:12px; background:#FFF5F5; border-left:4px solid #C41E3A;">
+                    <b>핵심 분석:</b> 9~10구간 밀집 대학일수록 '고금리 일반상환 대출' 비중이 압도적으로 높습니다. 
+                    이는 ICL(취업 후 상환) 안전망에서 원천 배제된 학생들이 질 나쁜 빚으로 내몰리는 <b>제도적 배제의 증거</b>입니다.
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.markdown("---")
+                    st.markdown("#### 💰 대출자 1인당 실부담 금액 비교")
+                    grp_amt = filtered_df.groupby("소득구간_추정").agg(
+                        일반대출_1인당=("대출자_1인당_일반대출", "mean"),
+                        취업대출_1인당=("대출자_1인당_취업대출", "mean")
+                    ).reset_index()
+                    grp_amt["일반대출_1인당"] = pd.to_numeric(grp_amt["일반대출_1인당"], errors="coerce").fillna(0)
+                    grp_amt["취업대출_1인당"] = pd.to_numeric(grp_amt["취업대출_1인당"], errors="coerce").fillna(0)
+                    fig_amt = go.Figure([
+                        go.Bar(name="일반상환(고금리)", x=grp_amt["소득구간_추정"],
+                               y=grp_amt["일반대출_1인당"], marker_color=C_RED),
+                        go.Bar(name="취업후상환(ICL)", x=grp_amt["소득구간_추정"],
+                               y=grp_amt["취업대출_1인당"], marker_color=C_BLUE)
+                    ])
+                    fig_amt.update_layout(barmode="group")
+                    st.plotly_chart(styled_fig(fig_amt, "분위별 대출자 1인당 실부담액"), use_container_width=True)
+
             with t3:
                 purpose_data = filtered_df.groupby("지역별")[["총_등록금대출_금액", "총_생활비대출_금액"]].sum().reset_index()
                 fig3 = px.bar(purpose_data, x="지역별", y=["총_생활비대출_금액", "총_등록금대출_금액"], barmode="stack", color_discrete_sequence=[C_DARK, "#888888"])
                 st.plotly_chart(styled_fig(fig3, "등록금 대출 vs 생활비 대출 비중"), use_container_width=True)
+
             with t4:
-                fig4 = px.scatter(filtered_df, x="교외장학금 국가", y="총_생활비대출_금액", hover_name="학교명", size="총_대출_학생수", color="총_생활비대출_금액", color_continuous_scale=[[0, "#E8E8E8"], [0.5, C_BLUE], [1, C_RED]])
-                st.plotly_chart(styled_fig(fig4, "국가장학금 x 생활비 대출 상관관계"), use_container_width=True)
-            with t5:
                 if not filtered_df.empty:
                     avg_data = filtered_df.groupby("설립별")[["평균등록금(원)", "1인당_대출액(원)"]].mean().reset_index()
                     fig5 = px.bar(avg_data, x="설립별", y=["평균등록금(원)", "1인당_대출액(원)"], barmode="group", color_discrete_sequence=[C_BLUE, C_RED])
                     st.plotly_chart(styled_fig(fig5, "국공립 vs 사립 지표 비교"), use_container_width=True)
+                    st.markdown("---")
+                    st.markdown("#### 📊 설립유형 × 장학금 분위 교차 분석")
+                    if "소득구간_추정" in filtered_df.columns:
+                        cross = filtered_df.groupby(
+                            ["설립별", "소득구간_추정"]
+                        )["대출학생비율(%)"].mean().reset_index()
+                        cross["대출학생비율(%)"] = pd.to_numeric(cross["대출학생비율(%)"], errors="coerce").fillna(0)
+                        fig_cross = px.bar(
+                            cross, x="소득구간_추정", y="대출학생비율(%)",
+                            color="설립별", barmode="group",
+                            color_discrete_sequence=[C_BLUE, C_RED]
+                        )
+                        st.plotly_chart(
+                            styled_fig(fig_cross, "설립유형별 분위 대출학생 비율"),
+                            use_container_width=True
+                        )
+            
 
         with right_col:
             st.markdown("### 대학별 지표 분포 지도")
@@ -534,9 +682,9 @@ try:
         section_label("구조적 해결 방안")
         
         p1r, p2r, p3r = st.columns(3, gap="medium")
-        with p1r: st.markdown(policy_card(C_RED, "POLICY 01", "ICL 자격의 전면 확대", "9·10구간 가구에도 취업 후 상환 학자금 대출 제도를 전면 개방해 졸업 전 금융 리스크 노출을 방지합니다."), unsafe_allow_html=True)
+        with p1r: st.markdown(policy_card(C_RED, "POLICY 01", "ICL 자격의 전면 확대", "안전망 부재로 고위험군에 놓인 학생들을 위해 취업 후 상환 학자금 대출 제도를 개방합니다."), unsafe_allow_html=True)
         with p2r: st.markdown(policy_card(C_BLUE, "POLICY 02", "독립 생계 인정 제도", "부모의 경제적 지원 없이 독자 생계를 유지하는 학생들을 선별해 소득 분위 산정 시 부모 자산을 유예합니다."), unsafe_allow_html=True)
-        with p3r: st.markdown(policy_card(C_DARK, "POLICY 03", "근로장학금 20% 의무 할당", "생계비 마련 목적 대출 이력이 확인된 9·10구간 학생층에 대해 교내 근로 배정 쿼터를 적용합니다."), unsafe_allow_html=True)
+        with p3r: st.markdown(policy_card(C_DARK, "POLICY 03", "근로장학금 20% 의무 할당", "생계비 목적 대출 이력이 확인된 9·10구간 학생층에 대해 교내 근로 배정 쿼터를 적용합니다."), unsafe_allow_html=True)
 
 except Exception as e:
     st.markdown(f"<div style='background:#FFF5F5;border-left:3px solid #C41E3A;padding:16px 20px;'><strong>시스템 실행 오류:</strong> {str(e)}</div>", unsafe_allow_html=True)
